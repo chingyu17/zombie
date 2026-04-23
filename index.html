@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧟 殭屍圍城：無限生存</title>
+    <style>
+        body {
+            margin: 0;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: 'Arial Black', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        h1 {
+            margin: 10px 0;
+            color: #ff0000;
+            text-shadow: 0 0 20px #ff0000, 2px 2px 0 #000;
+            font-size: 2.5em;
+            letter-spacing: 3px;
+        }
+
+        .game-container {
+            position: relative;
+            border: 4px solid #ff0000;
+            box-shadow: 0 0 30px #ff0000;
+            background: #111;
+            cursor: crosshair;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .ui {
+            margin-top: 10px;
+            display: flex;
+            gap: 30px;
+            font-size: 1.3em;
+        }
+
+        .score { color: #00ff00; text-shadow: 0 0 10px #00ff00; }
+        .health { color: #ff0000; text-shadow: 0 0 10px #ff0000; }
+        .wave { color: #ffff00; text-shadow: 0 0 10px #ffff00; }
+
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            display: none;
+        }
+
+        .overlay.active { display: flex; }
+
+        .overlay h2 {
+            font-size: 4em;
+            color: #ff0000;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px #ff0000;
+        }
+
+        .overlay p {
+            font-size: 1.5em;
+            margin-bottom: 30px;
+            color: #ccc;
+        }
+
+        .btn {
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: 0.2s;
+            box-shadow: 0 0 20px #ff0000;
+            font-family: 'Arial Black', sans-serif;
+        }
+
+        .btn:hover {
+            background: #ff3333;
+            transform: scale(1.1);
+            box-shadow: 0 0 40px #ff0000;
+        }
+
+        .combo {
+            position: absolute;
+            font-size: 2em;
+            color: #ffff00;
+            font-weight: bold;
+            pointer-events: none;
+            animation: comboFade 1s forwards;
+        }
+
+        @keyframes comboFade {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(2) translateY(-50px); }
+        }
+
+        .blood {
+            position: absolute;
+            pointer-events: none;
+            animation: bloodSplash 0.5s forwards;
+        }
+
+        @keyframes bloodSplash {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(2); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🧟 ZOMBIE SURVIVAL</h1>
+
+    <div class="game-container" id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div class="overlay" id="gameOverOverlay">
+            <h2>💀 YOU DIED</h2>
+            <p>最終得分: <span id="finalScore">0</span></p>
+            <p>存活時間: <span id="finalTime">0</span> 秒</p>
+            <p>消滅殭屍: <span id="finalKills">0</span> 隻</p>
+            <button class="btn" onclick="resetGame()">再活一次</button>
+        </div>
+    </div>
+
+    <div class="ui">
+        <div class="score">得分: <span id="scoreVal">0</span></div>
+        <div class="health">❤️ 生命: <span id="healthVal">100</span>%</div>
+        <div class="wave">🌊 波次: <span id="waveVal">1</span></div>
+    </div>
+
+    <div style="margin-top: 10px; color: #666; font-size: 0.9em;">
+        點擊殭屍消滅它們 | 殭屍碰到你會扣血 | 堅持越久越難！
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('gameContainer');
+        const scoreEl = document.getElementById('scoreVal');
+        const healthEl = document.getElementById('healthVal');
+        const waveEl = document.getElementById('waveVal');
+        const finalScoreEl = document.getElementById('finalScore');
+        const finalTimeEl = document.getElementById('finalTime');
+        const finalKillsEl = document.getElementById('finalKills');
+        const overlay = document.getElementById('gameOverOverlay');
+
+        // 遊戲參數
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // 遊戲狀態
+        let score = 0;
+        let health = 100;
+        let wave = 1;
+        let isGameOver = false;
+        let startTime = Date.now();
+        let zombies = [];
+        let particles = [];
+        let kills = 0;
+        let combo = 0;
+        let comboTimer = 0;
+
+        // 玩家
+        const player = {
+            x: width / 2,
+            y: height / 2,
+            radius: 20,
+            color: '#00ff00'
+        };
+
+        // --- 類別定義 ---
+
+        class Zombie {
+            constructor() {
+                // 從邊緣生成
+                const edge = Math.floor(Math.random() * 4);
+                switch(edge) {
+                    case 0: this.x = Math.random() * width; this.y = -30; break; // 上
+                    case 1: this.x = width + 30; this.y = Math.random() * height; break; // 右
+                    case 2: this.x = Math.random() * width; this.y = height + 30; break; // 下
+                    case 3: this.x = -30; this.y = Math.random() * height; break; // 左
+                }
+
+                // 根據波次增加難度
+                const difficultyMultiplier = 1 + (wave - 1) * 0.2;
+                this.radius = 15 + Math.random() * 10 + (wave * 2);
+                this.speed = (1 + Math.random() * 1.5) * difficultyMultiplier;
+                this.health = 1 + Math.floor(wave / 3);
+                this.maxHealth = this.health;
+                this.color = `hsl(${100 + Math.random() * 40}, 70%, ${30 + Math.random() * 30}%)`;
+                this.angle = 0;
+                this.wobble = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                // 朝向玩家移動
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 0) {
+                    this.x += (dx / dist) * this.speed;
+                    this.y += (dy / dist) * this.speed;
+                }
+
+                // 搖擺效果
+                this.wobble += 0.1;
+                this.angle = Math.sin(this.wobble) * 0.2;
+
+                // 檢查是否碰到玩家
+                if (dist < this.radius + player.radius) {
+                    takeDamage(10);
+                    this.health = 0; // 殭屍撞死
+                    createBlood(this.x, this.y, 20);
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // 身體
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 眼睛
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.arc(-this.radius/3, -this.radius/4, this.radius/4, 0, Math.PI * 2);
+                ctx.arc(this.radius/3, -this.radius/4, this.radius/4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 嘴巴
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-this.radius/2, this.radius/4);
+                ctx.lineTo(this.radius/2, this.radius/4);
+                ctx.stroke();
+
+                // 血條
+                if (this.health < this.maxHealth) {
+                    ctx.fillStyle = '#333';
+                    ctx.fillRect(-this.radius, -this.radius - 8, this.radius * 2, 5);
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(-this.radius, -this.radius - 8, (this.radius * 2) * (this.health / this.maxHealth), 5);
+                }
+
+                ctx.restore();
+            }
+
+            hit() {
+                this.health--;
+                createBlood(this.x, this.y, 5);
+                if (this.health <= 0) {
+                    kills++;
+                    const comboBonus = combo > 0 ? combo * 10 : 0;
+                    addScore(100 + comboBonus);
+                    createBlood(this.x, this.y, 15);
+                    return true; // 死亡
+                }
+                return false;
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.life = 1;
+                this.decay = 0.02 + Math.random() * 0.03;
+                this.color = color;
+                this.size = 2 + Math.random() * 4;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.95;
+                this.vy *= 0.95;
+                this.life -= this.decay;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // --- 遊戲邏輯 ---
+
+        function addScore(points) {
+            score += points;
+            scoreEl.textContent = score;
+        }
+
+        function takeDamage(amount) {
+            health -= amount;
+            healthEl.textContent = Math.max(0, health);
+            
+            // 螢幕震動
+            container.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
+            setTimeout(() => {
+                container.style.transform = 'translate(0, 0)';
+            }, 100);
+
+            if (health <= 0) {
+                gameOver();
+            }
+        }
+
+        function createBlood(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, '#ff0000'));
+            }
+        }
+
+        function showCombo(x, y, amount) {
+            if (amount <= 1) return;
+            const el = document.createElement('div');
+            el.className = 'combo';
+            el.textContent = `${amount}x COMBO!`;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function spawnZombie() {
+            if (isGameOver) return;
+            zombies.push(new Zombie());
+            
+            // 隨著波次增加生成速度
+            const spawnRate = Math.max(500, 2000 - wave * 150);
+            setTimeout(spawnZombie, spawnRate);
+        }
+
+        function checkWave() {
+            if (isGameOver) return;
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const newWave = Math.floor(elapsed / 30) + 1;
+            
+            if (newWave > wave) {
+                wave = newWave;
+                waveEl.textContent = wave;
+                
+                // 波次提升特效
+                const waveEl2 = document.createElement('div');
+                waveEl2.className = 'combo';
+                waveEl2.textContent = `🌊 WAVE ${wave}!`;
+                waveEl2.style.fontSize = '3em';
+                waveEl2.style.color = '#ff0000';
+                waveEl2.style.left = '50%';
+                waveEl2.style.top = '50%';
+                waveEl2.style.transform = 'translate(-50%, -50%)';
+                container.appendChild(waveEl2);
+                setTimeout(() => waveEl2.remove(), 2000);
+            }
+            
+            requestAnimationFrame(checkWave);
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            finalScoreEl.textContent = score;
+            finalTimeEl.textContent = elapsed;
+            finalKillsEl.textContent = kills;
+            overlay.classList.add('active');
+        }
+
+        function resetGame() {
+            score = 0;
+            health = 100;
+            wave = 1;
+            isGameOver = false;
+            startTime = Date.now();
+            zombies = [];
+            particles = [];
+            kills = 0;
+            combo = 0;
+            
+            scoreEl.textContent = score;
+            healthEl.textContent = health;
+            waveEl.textContent = wave;
+            overlay.classList.remove('active');
+            
+            spawnZombie();
+            checkWave();
+        }
+
+        // --- 主迴圈 ---
+
+        function update() {
+            if (isGameOver) return;
+
+            // 更新殭屍
+            zombies = zombies.filter(z => {
+                z.update();
+                return z.health > 0;
+            });
+
+            // 更新粒子
+            particles = particles.filter(p => {
+                p.update();
+                return p.life > 0;
+            });
+
+            // 連擊計時
+            if (combo > 0) {
+                comboTimer--;
+                if (comboTimer <= 0) {
+                    combo = 0;
+                }
+            }
+        }
+
+        function draw() {
+            // 清空
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, width, height);
+
+            // 繪製網格背景
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < width; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, height);
+                ctx.stroke();
+            }
+            for (let i = 0; i < height; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(width, i);
+                ctx.stroke();
+            }
+
+            // 繪製玩家
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // 繪製殭屍
+            zombies.forEach(z => z.draw());
+
+            // 繪製粒子
+            particles.forEach(p => p.draw());
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // --- 事件監聽 ---
+
+        canvas.addEventListener('click', (e) => {
+            if (isGameOver) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            // 檢查點擊到哪個殭屍
+            let hit = false;
+            for (let i = zombies.length - 1; i >= 0; i--) {
+                const z = zombies[i];
+                const dx = x - z.x;
+                const dy = y - z.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist < z.radius + 10) {
+                    const dead = z.hit();
+                    if (dead) {
+                        zombies.splice(i, 1);
+                        combo++;
+                        comboTimer = 60; // 1秒連擊窗口
+                        showCombo(z.x, z.y, combo);
+                    }
+                    hit = true;
+                    break;
+                }
+            }
+
+            if (!hit) {
+                combo = 0; // 點空重置連擊
+            }
+        });
+
+        // 啟動
+        spawnZombie();
+        checkWave();
+        loop();
+
+    </script>
+</body>
+</html>
