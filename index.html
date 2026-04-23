@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧟 殭屍圍城：無限生存</title>
+    <title>🧟 殭屍圍城v1.2</title>
     <style>
         body {
             margin: 0;
@@ -42,44 +42,161 @@
         .ui {
             margin-top: 10px;
             display: flex;
-            gap: 30px;
-            font-size: 1.3em;
+            gap: 20px;
+            font-size: 1.2em;
         }
 
         .score { color: #00ff00; text-shadow: 0 0 10px #00ff00; }
+        .gold { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
         .health { color: #ff0000; text-shadow: 0 0 10px #ff0000; }
         .wave { color: #ffff00; text-shadow: 0 0 10px #ffff00; }
 
-        .overlay {
+        /* 商店樣式 */
+        .shop-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85);
-            display: flex;
+            background: rgba(0,0,0,0.9);
+            display: none;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 10;
-            display: none;
+            z-index: 20;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        .overlay.active { display: flex; }
+        .shop-overlay.active { display: flex; }
 
-        .overlay h2 {
+        .shop-title {
+            font-size: 3em;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+            margin-bottom: 20px;
+        }
+
+        .shop-gold {
+            font-size: 1.5em;
+            color: #ffd700;
+            margin-bottom: 30px;
+        }
+
+        .shop-items {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .shop-item {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #ffd700;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .shop-item:hover {
+            background: rgba(255, 215, 0, 0.2);
+            transform: scale(1.05);
+        }
+
+        .shop-item.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #666;
+        }
+
+        .shop-item.purchased {
+            border-color: #00ff00;
+            background: rgba(0, 255, 0, 0.1);
+        }
+
+        .item-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .item-name {
+            font-size: 1.2em;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .item-desc {
+            font-size: 0.8em;
+            color: #aaa;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .item-price {
+            font-size: 1.3em;
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .item-owned {
+            font-size: 0.9em;
+            color: #00ff00;
+            margin-top: 5px;
+        }
+
+        .close-shop {
+            margin-top: 30px;
+            background: #ff0000;
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: 0.2s;
+            box-shadow: 0 0 20px #ff0000;
+        }
+
+        .close-shop:hover {
+            background: #ff3333;
+            transform: scale(1.1);
+        }
+
+        /* 遊戲結束覆蓋層 */
+        .game-over-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+        }
+
+        .game-over-overlay.active { display: flex; }
+
+        .game-over-overlay h2 {
             font-size: 4em;
             color: #ff0000;
             margin-bottom: 20px;
             text-shadow: 0 0 30px #ff0000;
         }
 
-        .overlay p {
-            font-size: 1.5em;
+        .game-over-stats {
+            font-size: 1.3em;
             margin-bottom: 30px;
             color: #ccc;
+            text-align: center;
+            line-height: 1.8;
         }
 
-        .btn {
-            background: #ff0000;
-            color: #fff;
+        .restart-btn {
+            background: #00ff00;
+            color: #000;
             border: none;
             padding: 15px 40px;
             font-size: 1.5em;
@@ -87,14 +204,32 @@
             cursor: pointer;
             border-radius: 10px;
             transition: 0.2s;
-            box-shadow: 0 0 20px #ff0000;
-            font-family: 'Arial Black', sans-serif;
+            box-shadow: 0 0 20px #00ff00;
+            margin: 10px;
         }
 
-        .btn:hover {
-            background: #ff3333;
+        .restart-btn:hover {
+            background: #33ff33;
             transform: scale(1.1);
-            box-shadow: 0 0 40px #ff0000;
+        }
+
+        .continue-btn {
+            background: #ffd700;
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5em;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: 0.2s;
+            box-shadow: 0 0 20px #ffd700;
+            margin: 10px;
+        }
+
+        .continue-btn:hover {
+            background: #ffea00;
+            transform: scale(1.1);
         }
 
         .combo {
@@ -111,41 +246,80 @@
             100% { opacity: 0; transform: scale(2) translateY(-50px); }
         }
 
-        .blood {
+        .gold-drop {
             position: absolute;
+            font-size: 1.2em;
+            color: #ffd700;
+            font-weight: bold;
             pointer-events: none;
-            animation: bloodSplash 0.5s forwards;
+            animation: goldFloat 1s forwards;
         }
 
-        @keyframes bloodSplash {
-            0% { opacity: 1; transform: scale(1); }
-            100% { opacity: 0; transform: scale(2); }
+        @keyframes goldFloat {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-30px); }
+        }
+
+        .pause-hint {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            color: #ffd700;
+            text-shadow: 0 0 20px #ffd700;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .pause-hint.show {
+            opacity: 1;
         }
     </style>
 </head>
 <body>
 
-    <h1>🧟 ZOMBIE SURVIVAL</h1>
+    <h1>🧟 ZOMBIE SHOP SURVIVAL</h1>
 
     <div class="game-container" id="gameContainer">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
-        <div class="overlay" id="gameOverOverlay">
-            <h2>💀 YOU DIED</h2>
-            <p>最終得分: <span id="finalScore">0</span></p>
-            <p>存活時間: <span id="finalTime">0</span> 秒</p>
-            <p>消滅殭屍: <span id="finalKills">0</span> 隻</p>
-            <button class="btn" onclick="resetGame()">再活一次</button>
+        
+        <!-- 商店覆蓋層 -->
+        <div class="shop-overlay" id="shopOverlay">
+            <div class="shop-title">🏪 殭屍商店</div>
+            <div class="shop-gold">💰 金幣: <span id="shopGold">0</span></div>
+            
+            <div class="shop-items" id="shopItems">
+                <!-- 商品由 JS 生成 -->
+            </div>
+            
+            <button class="close-shop" onclick="toggleShop()">關閉商店 (B)</button>
         </div>
+
+        <!-- 遊戲結束覆蓋層 -->
+        <div class="game-over-overlay" id="gameOverOverlay">
+            <h2>💀 YOU DIED</h2>
+            <div class="game-over-stats">
+                <p>最終得分: <span id="finalScore">0</span></p>
+                <p>存活時間: <span id="finalTime">0</span> 秒</p>
+                <p>消滅殭屍: <span id="finalKills">0</span> 隻</p>
+                <p>獲得金幣: <span id="finalGold">0</span> 💰</p>
+            </div>
+            <button class="restart-btn" onclick="resetGame()">再活一次</button>
+        </div>
+
+        <div class="pause-hint" id="pauseHint">⏸️ 遊戲暫停 - 按 B 關閉商店</div>
     </div>
 
     <div class="ui">
         <div class="score">得分: <span id="scoreVal">0</span></div>
+        <div class="gold">💰 金幣: <span id="goldVal">0</span></div>
         <div class="health">❤️ 生命: <span id="healthVal">100</span>%</div>
         <div class="wave">🌊 波次: <span id="waveVal">1</span></div>
     </div>
 
     <div style="margin-top: 10px; color: #666; font-size: 0.9em;">
-        點擊殭屍消滅它們 | 殭屍碰到你會扣血 | 堅持越久越難！
+        點擊殭屍消滅它們 | 按 <strong>B</strong> 打開商店 | 堅持越久越難！
     </div>
 
     <script>
@@ -153,12 +327,12 @@
         const ctx = canvas.getContext('2d');
         const container = document.getElementById('gameContainer');
         const scoreEl = document.getElementById('scoreVal');
+        const goldEl = document.getElementById('goldVal');
         const healthEl = document.getElementById('healthVal');
         const waveEl = document.getElementById('waveVal');
-        const finalScoreEl = document.getElementById('finalScore');
-        const finalTimeEl = document.getElementById('finalTime');
-        const finalKillsEl = document.getElementById('finalKills');
-        const overlay = document.getElementById('gameOverOverlay');
+        const shopOverlay = document.getElementById('shopOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const pauseHint = document.getElementById('pauseHint');
 
         // 遊戲參數
         const width = canvas.width;
@@ -166,15 +340,87 @@
 
         // 遊戲狀態
         let score = 0;
+        let gold = 0;
         let health = 100;
         let wave = 1;
         let isGameOver = false;
+        let isPaused = false;
         let startTime = Date.now();
         let zombies = [];
         let particles = [];
         let kills = 0;
         let combo = 0;
         let comboTimer = 0;
+
+        // 玩家升級狀態
+        let upgrades = {
+            damage: 1,          // 傷害倍率
+            goldMultiplier: 1,  // 金幣加成
+            healthRegen: 0,     // 生命恢復
+            zombieSlow: 1       // 殭屍減速
+        };
+
+        // 商店商品定義
+        const shopItems = [
+            {
+                id: 'heal',
+                name: '生命恢復',
+                desc: '恢復 30% 生命值',
+                icon: '❤️',
+                basePrice: 50,
+                maxLevel: 1,
+                effect: () => { health = Math.min(100, health + 30); }
+            },
+            {
+                id: 'damage',
+                name: '傷害升級',
+                desc: '增加 25% 傷害',
+                icon: '⚔️',
+                basePrice: 100,
+                maxLevel: 5,
+                effect: () => { upgrades.damage += 0.25; }
+            },
+            {
+                id: 'gold',
+                name: '金幣加成',
+                desc: '金幣獲得 +20%',
+                icon: '💰',
+                basePrice: 150,
+                maxLevel: 5,
+                effect: () => { upgrades.goldMultiplier += 0.2; }
+            },
+            {
+                id: 'slow',
+                name: '殭屍減速',
+                desc: '殭屍速度 -15%',
+                icon: '🐌',
+                basePrice: 200,
+                maxLevel: 5,
+                effect: () => { upgrades.zombieSlow *= 0.85; }
+            },
+            {
+                id: 'regen',
+                name: '生命恢復',
+                desc: '每秒恢復 2% 生命',
+                icon: '✨',
+                basePrice: 300,
+                maxLevel: 3,
+                effect: () => { upgrades.healthRegen += 2; }
+            },
+            {
+                id: 'shield',
+                name: '護盾',
+                desc: '吸收一次致命傷害',
+                icon: '🛡️',
+                basePrice: 500,
+                maxLevel: 1,
+                effect: () => { /* 護盾效果在遊戲中實現 */ }
+            }
+        ];
+
+        // 玩家升級等級追蹤
+        let upgradeLevels = {};
+        shopItems.forEach(item => upgradeLevels[item.id] = 0);
 
         // 玩家
         const player = {
@@ -184,24 +430,257 @@
             color: '#00ff00'
         };
 
+        // --- 商店系統 ---
+
+        function updateShopUI() {
+            document.getElementById('shopGold').textContent = gold;
+            
+            const shopItemsContainer = document.getElementById('shopItems');
+            shopItemsContainer.innerHTML = '';
+
+            shopItems.forEach(item => {
+                const currentLevel = upgradeLevels[item.id];
+                const isMaxed = currentLevel >= item.maxLevel;
+                const price = Math.floor(item.basePrice * Math.pow(1.3, currentLevel));
+                const canAfford = gold >= price;
+
+                const itemEl = document.createElement('div');
+                itemEl.className = `shop-item ${isMaxed ? 'purchased' : ''} ${(!canAfford && !isMaxed) ? 'disabled' : ''}`;
+                
+                itemEl.innerHTML = `
+                    <div class="item-icon">${item.icon}</div>
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-desc">${item.desc}</div>
+                    <div class="item-price">${isMaxed ? 'MAX' : '💰 ' + price}</div>
+                    ${currentLevel > 0 ? `<div class="item-owned">等級: ${currentLevel}/${item.maxLevel}</div>` : ''}
+                `;
+
+                if (!isMaxed && canAfford) {
+                    itemEl.onclick = () => buyItem(item);
+                }
+
+                shopItemsContainer.appendChild(itemEl);
+            });
+        }
+
+        function buyItem(item) {
+            const currentLevel = upgradeLevels[item.id];
+            const price = Math.floor(item.basePrice * Math.pow(1.3, currentLevel));
+
+            if (gold >= price && currentLevel < item.maxLevel) {
+                gold -= price;
+                upgradeLevels[item.id]++;
+                item.effect();
+                updateShopUI();
+                updateUI();
+                
+                // 顯示購買效果
+                showFloatingText(container, `✅ ${item.name}!`, '#00ff00');
+            }
+        }
+
+        function toggleShop() {
+            if (isGameOver) return;
+            
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                shopOverlay.classList.add('active');
+                pauseHint.classList.add('show');
+                updateShopUI();
+            } else {
+                shopOverlay.classList.remove('active');
+                pauseHint.classList.remove('show');
+            }
+        }
+
+        function showFloatingText(element, text, color) {
+            const el = document.createElement('div');
+            el.className = 'gold-drop';
+            el.textContent = text;
+            el.style.color = color;
+            el.style.left = '50%';
+            el.style.top = '50%';
+            el.style.transform = 'translate(-50%, -50%)';
+            element.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        // --- 遊戲邏輯 ---
+
+        function addScore(points) {
+            score += points;
+            scoreEl.textContent = score;
+        }
+
+        function addGold(amount) {
+            const actualGold = Math.floor(amount * upgrades.goldMultiplier);
+            gold += actualGold;
+            goldEl.textContent = gold;
+            
+            // 顯示金幣掉落
+            const el = document.createElement('div');
+            el.className = 'gold-drop';
+            el.textContent = `+${actualGold} 💰`;
+            el.style.left = (width/2 + Math.random()*100 - 50) + 'px';
+            el.style.top = (height/2 + Math.random()*100 - 50) + 'px';
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function takeDamage(amount) {
+            health -= amount;
+            healthEl.textContent = Math.max(0, health);
+            
+            // 螢幕震動
+            container.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
+            setTimeout(() => {
+                container.style.transform = 'translate(0, 0)';
+            }, 100);
+
+            if (health <= 0) {
+                gameOver();
+            }
+        }
+
+        function healOverTime() {
+            if (upgrades.healthRegen > 0 && !isPaused && !isGameOver) {
+                health = Math.min(100, health + upgrades.healthRegen / 60); // 每秒恢復
+                healthEl.textContent = Math.floor(health);
+            }
+        }
+
+        function createBlood(x, y, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, '#ff0000'));
+            }
+        }
+
+        function showCombo(x, y, amount) {
+            if (amount <= 1) return;
+            const el = document.createElement('div');
+            el.className = 'combo';
+            el.textContent = `${amount}x COMBO!`;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1000);
+        }
+
+        function spawnZombie() {
+            if (isGameOver || isPaused) {
+                if (!isGameOver) setTimeout(spawnZombie, 1000);
+                return;
+            }
+            
+            zombies.push(new Zombie());
+            
+            // 隨著波次增加生成速度
+            const spawnRate = Math.max(500, 2000 - wave * 150);
+            setTimeout(spawnZombie, spawnRate);
+        }
+
+        function checkWave() {
+            if (isGameOver || isPaused) {
+                if (!isGameOver) requestAnimationFrame(checkWave);
+                return;
+            }
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const newWave = Math.floor(elapsed / 30) + 1;
+            
+            if (newWave > wave) {
+                wave = newWave;
+                waveEl.textContent = wave;
+                
+                // 波次提升特效
+                const waveEl2 = document.createElement('div');
+                waveEl2.className = 'combo';
+                waveEl2.textContent = `🌊 WAVE ${wave}!`;
+                waveEl2.style.fontSize = '3em';
+                waveEl2.style.color = '#ff0000';
+                waveEl2.style.left = '50%';
+                waveEl2.style.top = '50%';
+                waveEl2.style.transform = 'translate(-50%, -50%)';
+                container.appendChild(waveEl2);
+                setTimeout(() => waveEl2.remove(), 2000);
+            }
+            
+            requestAnimationFrame(checkWave);
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            isPaused = false;
+            shopOverlay.classList.remove('active');
+            
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalTime').textContent = elapsed;
+            document.getElementById('finalKills').textContent = kills;
+            document.getElementById('finalGold').textContent = gold;
+            
+            gameOverOverlay.classList.add('active');
+        }
+
+        function resetGame() {
+            score = 0;
+            gold = 0;
+            health = 100;
+            wave = 1;
+            isGameOver = false;
+            isPaused = false;
+            startTime = Date.now();
+            zombies = [];
+            particles = [];
+            kills = 0;
+            combo = 0;
+            
+            // 重置升級
+            upgrades = {
+                damage: 1,
+                goldMultiplier: 1,
+                healthRegen: 0,
+                zombieSlow: 1
+            };
+            shopItems.forEach(item => upgradeLevels[item.id] = 0);
+            
+            scoreEl.textContent = score;
+            goldEl.textContent = gold;
+            healthEl.textContent = health;
+            waveEl.textContent = wave;
+            
+            gameOverOverlay.classList.remove('active');
+            shopOverlay.classList.remove('active');
+            pauseHint.classList.remove('show');
+            
+            spawnZombie();
+            checkWave();
+        }
+
+        function updateUI() {
+            scoreEl.textContent = score;
+            goldEl.textContent = gold;
+            healthEl.textContent = Math.floor(health);
+            waveEl.textContent = wave;
+        }
+
         // --- 類別定義 ---
 
         class Zombie {
             constructor() {
-                // 從邊緣生成
                 const edge = Math.floor(Math.random() * 4);
                 switch(edge) {
-                    case 0: this.x = Math.random() * width; this.y = -30; break; // 上
-                    case 1: this.x = width + 30; this.y = Math.random() * height; break; // 右
-                    case 2: this.x = Math.random() * width; this.y = height + 30; break; // 下
-                    case 3: this.x = -30; this.y = Math.random() * height; break; // 左
+                    case 0: this.x = Math.random() * width; this.y = -30; break;
+                    case 1: this.x = width + 30; this.y = Math.random() * height; break;
+                    case 2: this.x = Math.random() * width; this.y = height + 30; break;
+                    case 3: this.x = -30; this.y = Math.random() * height; break;
                 }
 
-                // 根據波次增加難度
                 const difficultyMultiplier = 1 + (wave - 1) * 0.2;
                 this.radius = 15 + Math.random() * 10 + (wave * 2);
-                this.speed = (1 + Math.random() * 1.5) * difficultyMultiplier;
-                this.health = 1 + Math.floor(wave / 3);
+                this.speed = (1 + Math.random() * 1.5) * difficultyMultiplier * upgrades.zombieSlow;
+                this.health = (1 + Math.floor(wave / 3)) / upgrades.damage;
                 this.maxHealth = this.health;
                 this.color = `hsl(${100 + Math.random() * 40}, 70%, ${30 + Math.random() * 30}%)`;
                 this.angle = 0;
@@ -209,7 +688,6 @@
             }
 
             update() {
-                // 朝向玩家移動
                 const dx = player.x - this.x;
                 const dy = player.y - this.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
@@ -219,14 +697,12 @@
                     this.y += (dy / dist) * this.speed;
                 }
 
-                // 搖擺效果
                 this.wobble += 0.1;
                 this.angle = Math.sin(this.wobble) * 0.2;
 
-                // 檢查是否碰到玩家
                 if (dist < this.radius + player.radius) {
                     takeDamage(10);
-                    this.health = 0; // 殭屍撞死
+                    this.health = 0;
                     createBlood(this.x, this.y, 20);
                 }
             }
@@ -236,7 +712,6 @@
                 ctx.translate(this.x, this.y);
                 ctx.rotate(this.angle);
 
-                // 身體
                 ctx.beginPath();
                 ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = this.color;
@@ -245,14 +720,12 @@
                 ctx.lineWidth = 3;
                 ctx.stroke();
 
-                // 眼睛
                 ctx.fillStyle = '#ff0000';
                 ctx.beginPath();
                 ctx.arc(-this.radius/3, -this.radius/4, this.radius/4, 0, Math.PI * 2);
                 ctx.arc(this.radius/3, -this.radius/4, this.radius/4, 0, Math.PI * 2);
                 ctx.fill();
 
-                // 嘴巴
                 ctx.strokeStyle = '#000';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
@@ -260,7 +733,6 @@
                 ctx.lineTo(this.radius/2, this.radius/4);
                 ctx.stroke();
 
-                // 血條
                 if (this.health < this.maxHealth) {
                     ctx.fillStyle = '#333';
                     ctx.fillRect(-this.radius, -this.radius - 8, this.radius * 2, 5);
@@ -278,8 +750,9 @@
                     kills++;
                     const comboBonus = combo > 0 ? combo * 10 : 0;
                     addScore(100 + comboBonus);
+                    addGold(10 + comboBonus / 10);
                     createBlood(this.x, this.y, 15);
-                    return true; // 死亡
+                    return true;
                 }
                 return false;
             }
@@ -315,141 +788,33 @@
             }
         }
 
-        // --- 遊戲邏輯 ---
-
-        function addScore(points) {
-            score += points;
-            scoreEl.textContent = score;
-        }
-
-        function takeDamage(amount) {
-            health -= amount;
-            healthEl.textContent = Math.max(0, health);
-            
-            // 螢幕震動
-            container.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
-            setTimeout(() => {
-                container.style.transform = 'translate(0, 0)';
-            }, 100);
-
-            if (health <= 0) {
-                gameOver();
-            }
-        }
-
-        function createBlood(x, y, count) {
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle(x, y, '#ff0000'));
-            }
-        }
-
-        function showCombo(x, y, amount) {
-            if (amount <= 1) return;
-            const el = document.createElement('div');
-            el.className = 'combo';
-            el.textContent = `${amount}x COMBO!`;
-            el.style.left = x + 'px';
-            el.style.top = y + 'px';
-            container.appendChild(el);
-            setTimeout(() => el.remove(), 1000);
-        }
-
-        function spawnZombie() {
-            if (isGameOver) return;
-            zombies.push(new Zombie());
-            
-            // 隨著波次增加生成速度
-            const spawnRate = Math.max(500, 2000 - wave * 150);
-            setTimeout(spawnZombie, spawnRate);
-        }
-
-        function checkWave() {
-            if (isGameOver) return;
-            
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const newWave = Math.floor(elapsed / 30) + 1;
-            
-            if (newWave > wave) {
-                wave = newWave;
-                waveEl.textContent = wave;
-                
-                // 波次提升特效
-                const waveEl2 = document.createElement('div');
-                waveEl2.className = 'combo';
-                waveEl2.textContent = `🌊 WAVE ${wave}!`;
-                waveEl2.style.fontSize = '3em';
-                waveEl2.style.color = '#ff0000';
-                waveEl2.style.left = '50%';
-                waveEl2.style.top = '50%';
-                waveEl2.style.transform = 'translate(-50%, -50%)';
-                container.appendChild(waveEl2);
-                setTimeout(() => waveEl2.remove(), 2000);
-            }
-            
-            requestAnimationFrame(checkWave);
-        }
-
-        function gameOver() {
-            isGameOver = true;
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            finalScoreEl.textContent = score;
-            finalTimeEl.textContent = elapsed;
-            finalKillsEl.textContent = kills;
-            overlay.classList.add('active');
-        }
-
-        function resetGame() {
-            score = 0;
-            health = 100;
-            wave = 1;
-            isGameOver = false;
-            startTime = Date.now();
-            zombies = [];
-            particles = [];
-            kills = 0;
-            combo = 0;
-            
-            scoreEl.textContent = score;
-            healthEl.textContent = health;
-            waveEl.textContent = wave;
-            overlay.classList.remove('active');
-            
-            spawnZombie();
-            checkWave();
-        }
-
         // --- 主迴圈 ---
 
         function update() {
-            if (isGameOver) return;
+            if (isGameOver || isPaused) return;
 
-            // 更新殭屍
             zombies = zombies.filter(z => {
                 z.update();
                 return z.health > 0;
             });
 
-            // 更新粒子
             particles = particles.filter(p => {
                 p.update();
                 return p.life > 0;
             });
 
-            // 連擊計時
             if (combo > 0) {
                 comboTimer--;
-                if (comboTimer <= 0) {
-                    combo = 0;
-                }
+                if (comboTimer <= 0) combo = 0;
             }
+
+            healOverTime();
         }
 
         function draw() {
-            // 清空
             ctx.fillStyle = '#111';
             ctx.fillRect(0, 0, width, height);
 
-            // 繪製網格背景
             ctx.strokeStyle = '#222';
             ctx.lineWidth = 1;
             for (let i = 0; i < width; i += 50) {
@@ -465,7 +830,6 @@
                 ctx.stroke();
             }
 
-            // 繪製玩家
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
             ctx.fillStyle = player.color;
@@ -474,10 +838,7 @@
             ctx.lineWidth = 3;
             ctx.stroke();
 
-            // 繪製殭屍
             zombies.forEach(z => z.draw());
-
-            // 繪製粒子
             particles.forEach(p => p.draw());
         }
 
@@ -490,13 +851,12 @@
         // --- 事件監聽 ---
 
         canvas.addEventListener('click', (e) => {
-            if (isGameOver) return;
+            if (isGameOver || isPaused) return;
 
             const rect = canvas.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
 
-            // 檢查點擊到哪個殭屍
             let hit = false;
             for (let i = zombies.length - 1; i >= 0; i--) {
                 const z = zombies[i];
@@ -509,7 +869,7 @@
                     if (dead) {
                         zombies.splice(i, 1);
                         combo++;
-                        comboTimer = 60; // 1秒連擊窗口
+                        comboTimer = 60;
                         showCombo(z.x, z.y, combo);
                     }
                     hit = true;
@@ -517,8 +877,12 @@
                 }
             }
 
-            if (!hit) {
-                combo = 0; // 點空重置連擊
+            if (!hit) combo = 0;
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'b') {
+                toggleShop();
             }
         });
 
