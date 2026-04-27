@@ -282,7 +282,7 @@
 </head>
 <body>
 
-    <h1>🧟 ZOMBIE SHOP SURVIVAL</h1>
+    <h1>🧟</h1>
 
     <div class="game-container" id="gameContainer">
         <canvas id="gameCanvas" width="800" height="600"></canvas>
@@ -370,7 +370,7 @@
                 name: '生命恢復',
                 desc: '恢復 30% 生命值',
                 icon: '❤️',
-                basePrice: 50,
+                basePrice: 100,
                 maxLevel: 1,
                 effect: () => { health = Math.min(100, health + 30); }
             },
@@ -406,7 +406,7 @@
                 name: '生命恢復',
                 desc: '每秒恢復 2% 生命',
                 icon: '✨',
-                basePrice: 300,
+                basePrice: 400,
                 maxLevel: 3,
                 effect: () => { upgrades.healthRegen += 2; }
             },
